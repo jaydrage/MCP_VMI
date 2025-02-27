@@ -11,6 +11,7 @@ function SupplyChainAnalysis({ data }) {
   const [selectedView, setSelectedView] = useState('overview');
   const [selectedFile, setSelectedFile] = useState('all');
   const [fileAnalyses, setFileAnalyses] = useState({});
+  const [error, setError] = useState(null);
   
   useEffect(() => {
     if (data) {
@@ -20,6 +21,7 @@ function SupplyChainAnalysis({ data }) {
   
   const performAnalysis = async () => {
     setIsAnalyzing(true);
+    setError(null);
     
     try {
       // First, analyze all files together
@@ -29,16 +31,24 @@ function SupplyChainAnalysis({ data }) {
         data: data.allFiles
       });
       
+      console.log("Combined analysis received:", combinedAnalysis);
+      
       // Then analyze each file type separately
       const typeAnalyses = {};
       for (const [type, files] of Object.entries(data.filesByType)) {
         if (files.length > 0) {
-          const typeAnalysis = await analyzeRetailData({
-            type: type,
-            location: data.location,
-            data: files.flat() // Flatten the array of arrays
-          });
-          typeAnalyses[type] = typeAnalysis;
+          try {
+            const typeAnalysis = await analyzeRetailData({
+              type: type,
+              location: data.location,
+              data: files.flat() // Flatten the array of arrays
+            });
+            typeAnalyses[type] = typeAnalysis;
+          } catch (error) {
+            console.error(`Error analyzing ${type} data:`, error);
+            setError(prev => prev ? `${prev}\n${error.message}` : error.message);
+            // Continue with other file types even if one fails
+          }
         }
       }
       
@@ -51,6 +61,8 @@ function SupplyChainAnalysis({ data }) {
       
     } catch (error) {
       console.error('Error analyzing data:', error);
+      setError(error.message || 'Failed to analyze data');
+      setAnalysis(null);
     } finally {
       setIsAnalyzing(false);
     }
@@ -212,6 +224,12 @@ function SupplyChainAnalysis({ data }) {
         <div className="loading">
           <p>Analyzing {data.fileCount} files of retail data...</p>
           <div className="spinner"></div>
+        </div>
+      ) : error ? (
+        <div className="api-error">
+          <h3>Analysis Error</h3>
+          <p>{error}</p>
+          <p>This may be due to API rate limits or an issue with the data. Try again with fewer files or wait a moment.</p>
         </div>
       ) : renderAnalysisView()}
     </div>

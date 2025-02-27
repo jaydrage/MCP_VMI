@@ -2,7 +2,7 @@
 import { analyzeRetailData as mockAnalyzeRetailData } from './mockAiService';
 
 // Determine if we should use the mock service
-const USE_MOCK_SERVICE = process.env.NODE_ENV === 'development';
+const USE_MOCK_SERVICE = false;
 
 export async function analyzeRetailData(data) {
   // Use mock service in development
